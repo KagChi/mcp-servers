@@ -1,8 +1,8 @@
 use async_trait::async_trait;
-use uuid::Uuid;
 use mcp_common::error::Result;
+use uuid::Uuid;
 
-use super::types::{Memory, CreateMemory, UpdateMemory, SearchQuery, ListQuery};
+use super::types::{CreateMemory, ListQuery, Memory, SearchQuery, UpdateMemory};
 
 #[async_trait]
 pub trait MemoryStore: Send + Sync {

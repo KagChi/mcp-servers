@@ -1,10 +1,12 @@
-use std::sync::Arc;
+use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
-use anyhow::Result;
 
-use crate::memory::{PostgresStore, MemoryStore, CreateMemory, UpdateMemory, SearchQuery, ListQuery, Memory};
+use crate::memory::{
+    CreateMemory, ListQuery, Memory, MemoryStore, PostgresStore, SearchQuery, UpdateMemory,
+};
 
 // Store memory tool
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -18,10 +20,7 @@ pub struct StoreMemoryParams {
     pub collection: Option<String>,
 }
 
-pub async fn store_memory(
-    store: Arc<PostgresStore>,
-    params: StoreMemoryParams,
-) -> Result<Memory> {
+pub async fn store_memory(store: Arc<PostgresStore>, params: StoreMemoryParams) -> Result<Memory> {
     let create = CreateMemory {
         content: params.content,
         context: params.context,
@@ -46,13 +45,9 @@ pub async fn get_memory(
     store: Arc<PostgresStore>,
     params: GetMemoryParams,
 ) -> Result<Option<Memory>> {
-    let id = Uuid::parse_str(&params.id)
-        .map_err(|e| anyhow::anyhow!("Invalid UUID: {}", e))?;
+    let id = Uuid::parse_str(&params.id).map_err(|e| anyhow::anyhow!("Invalid UUID: {}", e))?;
 
-    store
-        .get(id)
-        .await
-        .map_err(|e| anyhow::anyhow!("{}", e))
+    store.get(id).await.map_err(|e| anyhow::anyhow!("{}", e))
 }
 
 // Search memories tool
@@ -133,8 +128,7 @@ pub async fn update_memory(
     store: Arc<PostgresStore>,
     params: UpdateMemoryParams,
 ) -> Result<Memory> {
-    let id = Uuid::parse_str(&params.id)
-        .map_err(|e| anyhow::anyhow!("Invalid UUID: {}", e))?;
+    let id = Uuid::parse_str(&params.id).map_err(|e| anyhow::anyhow!("Invalid UUID: {}", e))?;
 
     let update = UpdateMemory {
         content: params.content,
@@ -165,8 +159,7 @@ pub async fn delete_memory(
     store: Arc<PostgresStore>,
     params: DeleteMemoryParams,
 ) -> Result<DeleteMemoryResult> {
-    let id = Uuid::parse_str(&params.id)
-        .map_err(|e| anyhow::anyhow!("Invalid UUID: {}", e))?;
+    let id = Uuid::parse_str(&params.id).map_err(|e| anyhow::anyhow!("Invalid UUID: {}", e))?;
 
     store
         .delete(id)
@@ -183,12 +176,8 @@ pub struct AddTagsParams {
     pub tags: Vec<String>,
 }
 
-pub async fn add_tags(
-    store: Arc<PostgresStore>,
-    params: AddTagsParams,
-) -> Result<Memory> {
-    let id = Uuid::parse_str(&params.id)
-        .map_err(|e| anyhow::anyhow!("Invalid UUID: {}", e))?;
+pub async fn add_tags(store: Arc<PostgresStore>, params: AddTagsParams) -> Result<Memory> {
+    let id = Uuid::parse_str(&params.id).map_err(|e| anyhow::anyhow!("Invalid UUID: {}", e))?;
 
     store
         .add_tags(id, params.tags)
@@ -203,12 +192,8 @@ pub struct RemoveTagsParams {
     pub tags: Vec<String>,
 }
 
-pub async fn remove_tags(
-    store: Arc<PostgresStore>,
-    params: RemoveTagsParams,
-) -> Result<Memory> {
-    let id = Uuid::parse_str(&params.id)
-        .map_err(|e| anyhow::anyhow!("Invalid UUID: {}", e))?;
+pub async fn remove_tags(store: Arc<PostgresStore>, params: RemoveTagsParams) -> Result<Memory> {
+    let id = Uuid::parse_str(&params.id).map_err(|e| anyhow::anyhow!("Invalid UUID: {}", e))?;
 
     store
         .remove_tags(id, params.tags)
@@ -217,9 +202,7 @@ pub async fn remove_tags(
 }
 
 // List tags tool
-pub async fn list_tags(
-    store: Arc<PostgresStore>,
-) -> Result<Vec<String>> {
+pub async fn list_tags(store: Arc<PostgresStore>) -> Result<Vec<String>> {
     store
         .list_tags()
         .await
@@ -227,9 +210,7 @@ pub async fn list_tags(
 }
 
 // List collections tool
-pub async fn list_collections(
-    store: Arc<PostgresStore>,
-) -> Result<Vec<String>> {
+pub async fn list_collections(store: Arc<PostgresStore>) -> Result<Vec<String>> {
     store
         .list_collections()
         .await

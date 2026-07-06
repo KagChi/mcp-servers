@@ -1,7 +1,7 @@
-pub mod types;
-pub mod store;
 pub mod postgres;
+pub mod store;
+pub mod types;
 
-pub use types::*;
-pub use store::MemoryStore;
 pub use postgres::PostgresStore;
+pub use store::MemoryStore;
+pub use types::*;

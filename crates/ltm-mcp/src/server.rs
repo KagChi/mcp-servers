@@ -1,17 +1,13 @@
 use std::sync::Arc;
-use serde_json;
 
 use rmcp::{
-    ServerHandler,
     model::{
-        Tool, ServerInfo, ServerCapabilities, ToolsCapability,
-        CallToolRequestParams, CallToolResult,
-        ListToolsResult, InitializeResult, ProtocolVersion,
-        Content, PaginatedRequestParams, InitializeRequestParams,
-        Implementation,
+        CallToolRequestParams, CallToolResult, Content, Implementation, InitializeRequestParams,
+        InitializeResult, ListToolsResult, PaginatedRequestParams, ProtocolVersion,
+        ServerCapabilities, ServerInfo, Tool, ToolsCapability,
     },
     service::{RequestContext, RoleServer},
-    ErrorData,
+    ErrorData, ServerHandler,
 };
 
 use crate::config::Config;
@@ -68,16 +64,116 @@ impl ServerHandler for LtmServer {
         _context: RequestContext<RoleServer>,
     ) -> Result<ListToolsResult, ErrorData> {
         let tools = vec![
-            Tool::new("store_memory", "Store a new memory entry", Arc::new(serde_json::to_value(&schemars::schema_for!(StoreMemoryParams).schema).unwrap().as_object().unwrap().clone())),
-            Tool::new("get_memory", "Retrieve a memory entry by ID", Arc::new(serde_json::to_value(&schemars::schema_for!(GetMemoryParams).schema).unwrap().as_object().unwrap().clone())),
-            Tool::new("search_memories", "Search memories by text query using full-text search", Arc::new(serde_json::to_value(&schemars::schema_for!(SearchMemoriesParams).schema).unwrap().as_object().unwrap().clone())),
-            Tool::new("list_memories", "List all memories with optional filtering", Arc::new(serde_json::to_value(&schemars::schema_for!(ListMemoriesParams).schema).unwrap().as_object().unwrap().clone())),
-            Tool::new("update_memory", "Update an existing memory entry", Arc::new(serde_json::to_value(&schemars::schema_for!(UpdateMemoryParams).schema).unwrap().as_object().unwrap().clone())),
-            Tool::new("delete_memory", "Delete a memory entry", Arc::new(serde_json::to_value(&schemars::schema_for!(DeleteMemoryParams).schema).unwrap().as_object().unwrap().clone())),
-            Tool::new("add_tags", "Add tags to a memory entry", Arc::new(serde_json::to_value(&schemars::schema_for!(AddTagsParams).schema).unwrap().as_object().unwrap().clone())),
-            Tool::new("remove_tags", "Remove tags from a memory entry", Arc::new(serde_json::to_value(&schemars::schema_for!(RemoveTagsParams).schema).unwrap().as_object().unwrap().clone())),
-            Tool::new("list_tags", "List all unique tags", Arc::new(serde_json::to_value(&schemars::schema_for!(()).schema).unwrap().as_object().unwrap().clone())),
-            Tool::new("list_collections", "List all unique collections", Arc::new(serde_json::to_value(&schemars::schema_for!(()).schema).unwrap().as_object().unwrap().clone())),
+            Tool::new(
+                "store_memory",
+                "Store a new memory entry",
+                Arc::new(
+                    serde_json::to_value(&schemars::schema_for!(StoreMemoryParams).schema)
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            ),
+            Tool::new(
+                "get_memory",
+                "Retrieve a memory entry by ID",
+                Arc::new(
+                    serde_json::to_value(&schemars::schema_for!(GetMemoryParams).schema)
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            ),
+            Tool::new(
+                "search_memories",
+                "Search memories by text query using full-text search",
+                Arc::new(
+                    serde_json::to_value(&schemars::schema_for!(SearchMemoriesParams).schema)
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            ),
+            Tool::new(
+                "list_memories",
+                "List all memories with optional filtering",
+                Arc::new(
+                    serde_json::to_value(&schemars::schema_for!(ListMemoriesParams).schema)
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            ),
+            Tool::new(
+                "update_memory",
+                "Update an existing memory entry",
+                Arc::new(
+                    serde_json::to_value(&schemars::schema_for!(UpdateMemoryParams).schema)
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            ),
+            Tool::new(
+                "delete_memory",
+                "Delete a memory entry",
+                Arc::new(
+                    serde_json::to_value(&schemars::schema_for!(DeleteMemoryParams).schema)
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            ),
+            Tool::new(
+                "add_tags",
+                "Add tags to a memory entry",
+                Arc::new(
+                    serde_json::to_value(&schemars::schema_for!(AddTagsParams).schema)
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            ),
+            Tool::new(
+                "remove_tags",
+                "Remove tags from a memory entry",
+                Arc::new(
+                    serde_json::to_value(&schemars::schema_for!(RemoveTagsParams).schema)
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            ),
+            Tool::new(
+                "list_tags",
+                "List all unique tags",
+                Arc::new(
+                    serde_json::to_value(&schemars::schema_for!(()).schema)
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            ),
+            Tool::new(
+                "list_collections",
+                "List all unique collections",
+                Arc::new(
+                    serde_json::to_value(&schemars::schema_for!(()).schema)
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            ),
         ];
 
         Ok(ListToolsResult::with_all_items(tools))
@@ -93,106 +189,98 @@ impl ServerHandler for LtmServer {
 
         let result_json = match tool_name {
             "store_memory" => {
-                let params: StoreMemoryParams = serde_json::from_value(
-                    serde_json::to_value(&request.arguments).unwrap()
-                )
-                .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
-                
+                let params: StoreMemoryParams =
+                    serde_json::from_value(serde_json::to_value(&request.arguments).unwrap())
+                        .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
+
                 let result = store_memory(store, params)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
-                
+
                 serde_json::to_string(&result)
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             }
             "get_memory" => {
-                let params: GetMemoryParams = serde_json::from_value(
-                    serde_json::to_value(&request.arguments).unwrap()
-                )
-                .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
-                
+                let params: GetMemoryParams =
+                    serde_json::from_value(serde_json::to_value(&request.arguments).unwrap())
+                        .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
+
                 let result = get_memory(store, params)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
-                
+
                 serde_json::to_string(&result)
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             }
             "search_memories" => {
-                let params: SearchMemoriesParams = serde_json::from_value(
-                    serde_json::to_value(&request.arguments).unwrap()
-                )
-                .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
-                
+                let params: SearchMemoriesParams =
+                    serde_json::from_value(serde_json::to_value(&request.arguments).unwrap())
+                        .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
+
                 let result = search_memories(store, params)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
-                
+
                 serde_json::to_string(&result)
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             }
             "list_memories" => {
-                let params: ListMemoriesParams = serde_json::from_value(
-                    serde_json::to_value(&request.arguments).unwrap()
-                )
-                .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
-                
+                let params: ListMemoriesParams =
+                    serde_json::from_value(serde_json::to_value(&request.arguments).unwrap())
+                        .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
+
                 let result = list_memories(store, params)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
-                
+
                 serde_json::to_string(&result)
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             }
             "update_memory" => {
-                let params: UpdateMemoryParams = serde_json::from_value(
-                    serde_json::to_value(&request.arguments).unwrap()
-                )
-                .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
-                
+                let params: UpdateMemoryParams =
+                    serde_json::from_value(serde_json::to_value(&request.arguments).unwrap())
+                        .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
+
                 let result = update_memory(store, params)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
-                
+
                 serde_json::to_string(&result)
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             }
             "delete_memory" => {
-                let params: DeleteMemoryParams = serde_json::from_value(
-                    serde_json::to_value(&request.arguments).unwrap()
-                )
-                .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
-                
+                let params: DeleteMemoryParams =
+                    serde_json::from_value(serde_json::to_value(&request.arguments).unwrap())
+                        .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
+
                 let result = delete_memory(store, params)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
-                
+
                 serde_json::to_string(&result)
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             }
             "add_tags" => {
-                let params: AddTagsParams = serde_json::from_value(
-                    serde_json::to_value(&request.arguments).unwrap()
-                )
-                .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
-                
+                let params: AddTagsParams =
+                    serde_json::from_value(serde_json::to_value(&request.arguments).unwrap())
+                        .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
+
                 let result = add_tags(store, params)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
-                
+
                 serde_json::to_string(&result)
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             }
             "remove_tags" => {
-                let params: RemoveTagsParams = serde_json::from_value(
-                    serde_json::to_value(&request.arguments).unwrap()
-                )
-                .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
-                
+                let params: RemoveTagsParams =
+                    serde_json::from_value(serde_json::to_value(&request.arguments).unwrap())
+                        .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
+
                 let result = remove_tags(store, params)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
-                
+
                 serde_json::to_string(&result)
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             }
@@ -200,7 +288,7 @@ impl ServerHandler for LtmServer {
                 let result = list_tags(store)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
-                
+
                 serde_json::to_string(&result)
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             }
@@ -208,11 +296,16 @@ impl ServerHandler for LtmServer {
                 let result = list_collections(store)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
-                
+
                 serde_json::to_string(&result)
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?
             }
-            _ => return Err(ErrorData::invalid_params(format!("Tool not found: {}", tool_name), None)),
+            _ => {
+                return Err(ErrorData::invalid_params(
+                    format!("Tool not found: {}", tool_name),
+                    None,
+                ))
+            }
         };
 
         Ok(CallToolResult {

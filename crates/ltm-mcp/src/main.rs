@@ -25,7 +25,11 @@ async fn main() -> Result<()> {
     // Load configuration from environment variables
     let config = Config::from_env()?;
     tracing::info!("Configuration loaded successfully");
-    tracing::info!("Server will listen on {}:{}", config.server.host, config.server.port);
+    tracing::info!(
+        "Server will listen on {}:{}",
+        config.server.host,
+        config.server.port
+    );
     tracing::info!("Log level: {}", config.log.level);
 
     // Create database connection pool
@@ -51,14 +55,14 @@ async fn main() -> Result<()> {
     use rmcp::ServiceExt;
 
     tracing::info!("Starting MCP server on stdio transport");
-    
+
     let running = server.serve(stdio()).await?;
-    
+
     tracing::info!("MCP server initialized and running");
-    
+
     // Wait for the server to finish
     let result = running.waiting().await;
-    
+
     match result {
         Ok(_) => {
             tracing::info!("Server shut down gracefully");
