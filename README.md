@@ -81,13 +81,23 @@ All configuration is done through environment variables with the `LTM_` prefix. 
 
 LTM-MCP uses the Model Context Protocol (MCP) over HTTP/SSE for remote access. The MCP endpoint is available at `/mcp`.
 
+### Authentication
+
+The server requires API key authentication using Bearer tokens. All requests to the `/mcp` endpoint must include the API key in the `Authorization` header:
+
+```
+Authorization: Bearer your-secret-api-key
+```
+
+The `/health` endpoint does not require authentication and can be used for Kubernetes health checks.
+
 ### Remote MCP Configuration
 
 To connect from an MCP client (such as Claude Desktop or other MCP-compatible tools), configure the connection with:
 
 **Endpoint URL:** `http://your-server:3000/mcp`
 
-**Authentication:** The server uses session-based authentication. Initialize a connection to receive a session ID in the `Mcp-Session-Id` header.
+**Authentication:** Include the `LTM_AUTH_API_KEY` value as a Bearer token in the Authorization header.
 
 ### Example: Connecting from Claude Desktop
 
@@ -98,11 +108,19 @@ Add to your MCP client configuration:
   "mcpServers": {
     "ltm-mcp": {
       "url": "http://your-ltm-server:3000/mcp",
-      "transport": "sse"
+      "transport": "sse",
+      "headers": {
+        "Authorization": "Bearer your-secret-api-key"
+      }
     }
   }
 }
 ```
+
+**Security Notes:**
+- Always use HTTPS in production deployments to protect the API key in transit
+- Keep your API key secret and rotate it regularly
+- Consider using a reverse proxy (nginx, Traefik) or API gateway for additional security features
 
 ## API Endpoints
 

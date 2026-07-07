@@ -3,11 +3,13 @@ use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
+mod auth;
 mod config;
 mod memory;
 mod server;
 mod tools;
 
+use auth::auth_middleware;
 use config::Config;
 use memory::postgres::PostgresStore;
 use server::LtmServer;
@@ -72,15 +74,25 @@ async fn main() -> Result<()> {
         Ok(server_instance)
     };
 
-    // Create StreamableHttpService with default config
+    // Create StreamableHttpService with host validation disabled
     let mcp_service = StreamableHttpService::new(
         service_factory,
         session_manager,
-        StreamableHttpServerConfig::default(),
+        StreamableHttpServerConfig::default().disable_allowed_hosts(),
     );
 
-    // Mount the MCP service at /mcp endpoint
-    let router = axum::Router::new().nest_service("/mcp", mcp_service);
+    // Health check endpoint handler
+    let health_check = || async { "OK" };
+
+    // Create protected MCP router with authentication
+    let protected_router = axum::Router::new().nest_service("/mcp", mcp_service).layer(
+        axum::middleware::from_fn_with_state(config.auth.api_key.clone(), auth_middleware),
+    );
+
+    // Combine with unauthenticated health endpoint
+    let router = axum::Router::new()
+        .route("/health", axum::routing::get(health_check))
+        .merge(protected_router);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("HTTP server listening on {}", addr);
