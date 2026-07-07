@@ -62,20 +62,18 @@ cargo run --package ltm-mcp
 
 ## Configuration
 
-All configuration is done through environment variables with the `LTM_` prefix:
+All configuration is done through environment variables with the `LTM_` prefix. For local development, create a `.env` file in `crates/ltm-mcp/` (see `.env.example`).
 
-### Server Configuration
+### Required Configuration
+- `LTM_DATABASE_URL` - PostgreSQL connection URL
+  - Format: `postgresql://user:password@host:port/database`
+  - Example: `postgresql://postgres:password@localhost:5432/ltm-mcp`
+- `LTM_AUTH_API_KEY` - API key for authentication
+  - Example: `your-secret-api-key-here`
+
+### Optional Configuration
 - `LTM_SERVER_HOST` - Server bind address (default: `0.0.0.0`)
 - `LTM_SERVER_PORT` - Server port (default: `3000`)
-
-### Database Configuration
-- `LTM_DATABASE_URL` - PostgreSQL connection URL (required)
-  - Format: `postgresql://user:password@host:port/database`
-
-### Authentication Configuration
-- `LTM_AUTH_API_KEY` - API key for authentication (required)
-
-### Logging Configuration
 - `LTM_LOG_LEVEL` - Log level (default: `info`)
   - Options: `trace`, `debug`, `info`, `warn`, `error`
 

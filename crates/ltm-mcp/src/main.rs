@@ -14,6 +14,10 @@ use server::LtmServer;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Load .env file if it exists (for local development)
+    // This will not override existing environment variables
+    let _ = dotenvy::dotenv();
+
     // Initialize tracing
     tracing_subscriber::registry()
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
