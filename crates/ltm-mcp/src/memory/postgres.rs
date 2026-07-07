@@ -32,7 +32,10 @@ impl MemoryStore for PostgresStore {
             .map_err(|e| CommonError::Serialization(e.to_string()))?;
 
         // Convert embedding Vec<f32> to pgvector::Vector if present
-        let embedding_vector = memory.embedding.as_ref().map(|e| pgvector::Vector::from(e.clone()));
+        let embedding_vector = memory
+            .embedding
+            .as_ref()
+            .map(|e| pgvector::Vector::from(e.clone()));
 
         let row = sqlx::query(
             r#"
@@ -576,8 +579,8 @@ impl PostgresStore {
         }
 
         let rows = query_builder
-            .bind(query.limit as i64)
-            .bind(query.offset as i64)
+            .bind(query.limit)
+            .bind(query.offset)
             .fetch_all(&self.pool)
             .await
             .map_err(|e| CommonError::Database(e.to_string()))?;
@@ -638,8 +641,8 @@ impl PostgresStore {
         }
 
         let rows = query_builder
-            .bind(query.limit as i64)
-            .bind(query.offset as i64)
+            .bind(query.limit)
+            .bind(query.offset)
             .fetch_all(&self.pool)
             .await
             .map_err(|e| CommonError::Database(e.to_string()))?;
@@ -685,9 +688,7 @@ impl PostgresStore {
         sql.push_str(" OFFSET $");
         sql.push_str(&param_count.to_string());
 
-        let mut query_builder = sqlx::query(&sql)
-            .bind(query_vector)
-            .bind(&query.query);
+        let mut query_builder = sqlx::query(&sql).bind(query_vector).bind(&query.query);
 
         if let Some(repo) = &query.repo {
             query_builder = query_builder.bind(repo);
@@ -702,8 +703,8 @@ impl PostgresStore {
         }
 
         let rows = query_builder
-            .bind(query.limit as i64)
-            .bind(query.offset as i64)
+            .bind(query.limit)
+            .bind(query.offset)
             .fetch_all(&self.pool)
             .await
             .map_err(|e| CommonError::Database(e.to_string()))?;
