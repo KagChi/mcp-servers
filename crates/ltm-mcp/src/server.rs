@@ -26,8 +26,16 @@ pub struct LtmServer {
 }
 
 impl LtmServer {
-    pub fn new(store: Arc<PostgresStore>, config: Config, embedding_service: Option<Arc<EmbeddingService>>) -> Self {
-        Self { store, config, embedding_service }
+    pub fn new(
+        store: Arc<PostgresStore>,
+        config: Config,
+        embedding_service: Option<Arc<EmbeddingService>>,
+    ) -> Self {
+        Self {
+            store,
+            config,
+            embedding_service,
+        }
     }
 }
 

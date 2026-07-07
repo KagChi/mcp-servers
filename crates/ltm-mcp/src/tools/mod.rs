@@ -42,11 +42,17 @@ pub async fn store_memory(
                 info!("Auto-generating embedding for memory content");
                 match service.embed(&params.content) {
                     Ok(emb) => {
-                        info!("Successfully generated embedding with {} dimensions", emb.len());
+                        info!(
+                            "Successfully generated embedding with {} dimensions",
+                            emb.len()
+                        );
                         Some(emb)
                     }
                     Err(e) => {
-                        warn!("Failed to generate embedding: {}. Storing without embedding.", e);
+                        warn!(
+                            "Failed to generate embedding: {}. Storing without embedding.",
+                            e
+                        );
                         None
                     }
                 }
@@ -128,7 +134,10 @@ pub async fn search_memories(
                     info!("Auto-generating query embedding for search");
                     match service.embed(&params.query) {
                         Ok(emb) => {
-                            info!("Successfully generated query embedding with {} dimensions", emb.len());
+                            info!(
+                                "Successfully generated query embedding with {} dimensions",
+                                emb.len()
+                            );
                             Some(emb)
                         }
                         Err(e) => {

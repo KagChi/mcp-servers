@@ -594,7 +594,7 @@ impl PostgresStore {
         );
         query_builder.push_bind(query_vector.clone());
         query_builder.push(") AS rank FROM memories WHERE embedding IS NOT NULL");
-        
+
         if let Some(repo) = &query.repo {
             query_builder.push(" AND repo = ");
             query_builder.push_bind(repo);
@@ -609,11 +609,11 @@ impl PostgresStore {
                 query_builder.push_bind(tags);
             }
         }
-        
+
         query_builder.push(" ORDER BY embedding <=> ");
         query_builder.push_bind(query_vector);
         query_builder.push(" LIMIT 20");
-        
+
         query_builder.push(
             r#"
             ),
@@ -623,7 +623,7 @@ impl PostgresStore {
         );
         query_builder.push_bind(&query.query);
         query_builder.push(") query WHERE textsearch @@ query");
-        
+
         if let Some(repo) = &query.repo {
             query_builder.push(" AND repo = ");
             query_builder.push_bind(repo);
@@ -638,9 +638,9 @@ impl PostgresStore {
                 query_builder.push_bind(tags);
             }
         }
-        
+
         query_builder.push(" ORDER BY ts_rank(textsearch, query) DESC LIMIT 20");
-        
+
         query_builder.push(
             r#"
             )

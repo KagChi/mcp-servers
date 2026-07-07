@@ -61,7 +61,7 @@ async fn main() -> Result<()> {
         tracing::info!("Embedding service is enabled");
         tracing::info!("Model: {}", config.embedding.model);
         tracing::info!("Dimensions: {}", config.embedding.dimensions);
-        
+
         match EmbeddingService::with_model(
             &config.embedding.model,
             config.embedding.dimensions,
@@ -73,7 +73,9 @@ async fn main() -> Result<()> {
             }
             Err(e) => {
                 tracing::error!("Failed to initialize embedding service: {}", e);
-                tracing::warn!("Continuing without embedding service - embeddings must be provided by clients");
+                tracing::warn!(
+                    "Continuing without embedding service - embeddings must be provided by clients"
+                );
                 None
             }
         }
