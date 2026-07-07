@@ -10,7 +10,7 @@ A Model Context Protocol (MCP) server that provides long-term memory storage wit
 - **Automatic Embeddings**: Server-side embedding generation with configurable models
 - **Optimized Performance**: HNSW indexing for fast vector similarity search
 - **Tag-based Organization**: Organize memories with tags and collections
-- **Repository Scoping**: Separate memories by project/repository
+- **Scope-based Organization**: Separate memories by project/repository
 - **Zero API Costs**: Uses local embedding models (no OpenAI/external API required)
 
 ## Architecture
@@ -101,7 +101,7 @@ docker run -p 3000:3000 --env-file .env ltm-mcp
       "context": "Reviewing security implementation",
       "tags": ["auth", "security", "jwt"],
       "collection": "architecture",
-      "repo": "my-project"
+      "scope": "my-project"
     }
   }
 }
@@ -121,7 +121,7 @@ docker run -p 3000:3000 --env-file .env ltm-mcp
       "query": "how does authentication work?",
       "search_mode": "hybrid",
       "limit": 10,
-      "repo": "my-project"
+      "scope": "my-project"
     }
   }
 }

@@ -39,9 +39,9 @@ impl MemoryStore for PostgresStore {
 
         let row = sqlx::query(
             r#"
-            INSERT INTO memories (id, content, context, tags, collection, metadata, repo, embedding)
+            INSERT INTO memories (id, content, context, tags, collection, metadata, scope, embedding)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding
+            RETURNING id, content, context, tags, collection, created_at, updated_at, access_count, metadata, scope, embedding
             "#
         )
         .bind(id)
@@ -50,7 +50,7 @@ impl MemoryStore for PostgresStore {
         .bind(&memory.tags)
         .bind(&memory.collection)
         .bind(&metadata_json)
-        .bind(&memory.repo)
+        .bind(&memory.scope)
         .bind(&embedding_vector)
         .fetch_one(&self.pool)
         .await
@@ -90,7 +90,7 @@ impl MemoryStore for PostgresStore {
                 .try_get("access_count")
                 .map_err(|e| CommonError::Database(e.to_string()))?,
             metadata,
-            repo: row.try_get("repo").ok(),
+            scope: row.try_get("scope").ok(),
             embedding,
         })
     }
@@ -98,7 +98,7 @@ impl MemoryStore for PostgresStore {
     async fn get(&self, id: Uuid) -> Result<Option<Memory>> {
         let row = sqlx::query(
             r#"
-            SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding
+            SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, scope, embedding
             FROM memories
             WHERE id = $1
             "#
@@ -152,7 +152,7 @@ impl MemoryStore for PostgresStore {
                 .try_get("access_count")
                 .map_err(|e| CommonError::Database(e.to_string()))?,
             metadata,
-            repo: row.try_get("repo").ok(),
+            scope: row.try_get("scope").ok(),
             embedding,
         }))
     }
@@ -172,12 +172,12 @@ impl MemoryStore for PostgresStore {
         let offset = query.offset;
 
         let mut query_builder = sqlx::QueryBuilder::new(
-            "SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding FROM memories WHERE 1=1"
+            "SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, scope, embedding FROM memories WHERE 1=1"
         );
 
-        if let Some(ref repo) = query.repo {
-            query_builder.push(" AND repo = ");
-            query_builder.push_bind(repo);
+        if let Some(ref scope) = query.scope {
+            query_builder.push(" AND scope = ");
+            query_builder.push_bind(scope);
         }
         if let Some(ref collection) = query.collection {
             query_builder.push(" AND collection = ");
@@ -234,7 +234,7 @@ impl MemoryStore for PostgresStore {
                     .try_get("access_count")
                     .map_err(|e| CommonError::Database(e.to_string()))?,
                 metadata,
-                repo: row.try_get("repo").ok(),
+                scope: row.try_get("scope").ok(),
                 embedding,
             });
         }
@@ -267,9 +267,9 @@ impl MemoryStore for PostgresStore {
             query_builder.push(", metadata = ");
             query_builder.push_bind(metadata_json);
         }
-        if let Some(ref repo) = update.repo {
-            query_builder.push(", repo = ");
-            query_builder.push_bind(repo);
+        if let Some(ref scope) = update.scope {
+            query_builder.push(", scope = ");
+            query_builder.push_bind(scope);
         }
         if let Some(ref embedding) = update.embedding {
             let embedding_vector = pgvector::Vector::from(embedding.clone());
@@ -279,7 +279,7 @@ impl MemoryStore for PostgresStore {
 
         query_builder.push(" WHERE id = ");
         query_builder.push_bind(id);
-        query_builder.push(" RETURNING id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding");
+        query_builder.push(" RETURNING id, content, context, tags, collection, created_at, updated_at, access_count, metadata, scope, embedding");
 
         let row = query_builder
             .build()
@@ -320,7 +320,7 @@ impl MemoryStore for PostgresStore {
                 .try_get("access_count")
                 .map_err(|e| CommonError::Database(e.to_string()))?,
             metadata,
-            repo: row.try_get("repo").ok(),
+            scope: row.try_get("scope").ok(),
             embedding,
         })
     }
@@ -345,7 +345,7 @@ impl MemoryStore for PostgresStore {
             UPDATE memories
             SET tags = array(SELECT DISTINCT unnest(tags || $1::text[]))
             WHERE id = $2
-            RETURNING id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding
+            RETURNING id, content, context, tags, collection, created_at, updated_at, access_count, metadata, scope, embedding
             "#
         )
         .bind(&tags)
@@ -387,7 +387,7 @@ impl MemoryStore for PostgresStore {
                 .try_get("access_count")
                 .map_err(|e| CommonError::Database(e.to_string()))?,
             metadata,
-            repo: row.try_get("repo").ok(),
+            scope: row.try_get("scope").ok(),
             embedding,
         })
     }
@@ -398,7 +398,7 @@ impl MemoryStore for PostgresStore {
             UPDATE memories
             SET tags = array(SELECT unnest(tags) EXCEPT SELECT unnest($1::text[]))
             WHERE id = $2
-            RETURNING id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding
+            RETURNING id, content, context, tags, collection, created_at, updated_at, access_count, metadata, scope, embedding
             "#
         )
         .bind(&tags)
@@ -440,7 +440,7 @@ impl MemoryStore for PostgresStore {
                 .try_get("access_count")
                 .map_err(|e| CommonError::Database(e.to_string()))?,
             metadata,
-            repo: row.try_get("repo").ok(),
+            scope: row.try_get("scope").ok(),
             embedding,
         })
     }
@@ -496,7 +496,7 @@ impl PostgresStore {
     async fn keyword_search(&self, query: &SearchQuery) -> Result<Vec<Memory>> {
         let mut query_builder = sqlx::QueryBuilder::new(
             r#"
-            SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding,
+            SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, scope, embedding,
                    ts_rank(content_tsv, plainto_tsquery('english', "#,
         );
         query_builder.push_bind(&query.query);
@@ -505,9 +505,9 @@ impl PostgresStore {
         query_builder.push_bind(&query.query);
         query_builder.push(")");
 
-        if let Some(repo) = &query.repo {
-            query_builder.push(" AND repo = ");
-            query_builder.push_bind(repo);
+        if let Some(scope) = &query.scope {
+            query_builder.push(" AND scope = ");
+            query_builder.push_bind(scope);
         }
         if let Some(collection) = &query.collection {
             query_builder.push(" AND collection = ");
@@ -543,15 +543,15 @@ impl PostgresStore {
 
         let mut query_builder = sqlx::QueryBuilder::new(
             r#"
-            SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding,
+            SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, scope, embedding,
                    1 - (embedding <=> "#,
         );
         query_builder.push_bind(query_vector);
         query_builder.push(") as similarity FROM memories WHERE embedding IS NOT NULL");
 
-        if let Some(repo) = &query.repo {
-            query_builder.push(" AND repo = ");
-            query_builder.push_bind(repo);
+        if let Some(scope) = &query.scope {
+            query_builder.push(" AND scope = ");
+            query_builder.push_bind(scope);
         }
         if let Some(collection) = &query.collection {
             query_builder.push(" AND collection = ");
@@ -595,9 +595,9 @@ impl PostgresStore {
         query_builder.push_bind(query_vector.clone());
         query_builder.push(") AS rank FROM memories WHERE embedding IS NOT NULL");
 
-        if let Some(repo) = &query.repo {
-            query_builder.push(" AND repo = ");
-            query_builder.push_bind(repo);
+        if let Some(scope) = &query.scope {
+            query_builder.push(" AND scope = ");
+            query_builder.push_bind(scope);
         }
         if let Some(collection) = &query.collection {
             query_builder.push(" AND collection = ");
@@ -624,9 +624,9 @@ impl PostgresStore {
         query_builder.push_bind(&query.query);
         query_builder.push(") query WHERE textsearch @@ query");
 
-        if let Some(repo) = &query.repo {
-            query_builder.push(" AND repo = ");
-            query_builder.push_bind(repo);
+        if let Some(scope) = &query.scope {
+            query_builder.push(" AND scope = ");
+            query_builder.push_bind(scope);
         }
         if let Some(collection) = &query.collection {
             query_builder.push(" AND collection = ");
@@ -703,7 +703,7 @@ impl PostgresStore {
                     .try_get("access_count")
                     .map_err(|e| CommonError::Database(e.to_string()))?,
                 metadata,
-                repo: row.try_get("repo").ok(),
+                scope: row.try_get("scope").ok(),
                 embedding,
             });
         }

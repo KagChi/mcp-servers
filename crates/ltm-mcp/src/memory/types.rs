@@ -15,7 +15,7 @@ pub struct Memory {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub repo: Option<String>,
+    pub scope: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embedding: Option<Vec<f32>>,
     pub created_at: DateTime<Utc>,
@@ -35,7 +35,7 @@ pub struct CreateMemory {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub repo: Option<String>,
+    pub scope: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embedding: Option<Vec<f32>>,
     #[serde(default)]
@@ -53,7 +53,7 @@ pub struct UpdateMemory {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub repo: Option<String>,
+    pub scope: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embedding: Option<Vec<f32>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -68,7 +68,7 @@ pub struct SearchQuery {
     #[serde(default)]
     pub search_mode: SearchMode,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub repo: Option<String>,
+    pub scope: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -97,7 +97,7 @@ pub struct ListQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub repo: Option<String>,
+    pub scope: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
     #[serde(default = "default_limit")]

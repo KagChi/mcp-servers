@@ -24,7 +24,7 @@ pub struct StoreMemoryParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub repo: Option<String>,
+    pub scope: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embedding: Option<Vec<f32>>,
 }
@@ -68,7 +68,7 @@ pub async fn store_memory(
         tags: params.tags,
         collection: params.collection,
         metadata: Default::default(),
-        repo: params.repo,
+        scope: params.scope,
         embedding,
     };
 
@@ -106,7 +106,7 @@ pub struct SearchMemoriesParams {
     #[serde(default)]
     pub search_mode: crate::memory::SearchMode,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub repo: Option<String>,
+    pub scope: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -160,7 +160,7 @@ pub async fn search_memories(
         offset: params.offset,
         query_embedding,
         search_mode: params.search_mode,
-        repo: params.repo,
+        scope: params.scope,
         collection: params.collection,
         tags: params.tags,
     };
@@ -183,7 +183,7 @@ pub struct ListMemoriesParams {
     #[serde(default)]
     pub offset: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub repo: Option<String>,
+    pub scope: Option<String>,
 }
 
 pub async fn list_memories(
@@ -195,7 +195,7 @@ pub async fn list_memories(
         tags: params.tags,
         limit: params.limit,
         offset: params.offset,
-        repo: params.repo,
+        scope: params.scope,
     };
 
     store
@@ -217,7 +217,7 @@ pub struct UpdateMemoryParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub repo: Option<String>,
+    pub scope: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embedding: Option<Vec<f32>>,
 }
@@ -234,7 +234,7 @@ pub async fn update_memory(
         tags: params.tags,
         collection: params.collection,
         metadata: None,
-        repo: params.repo,
+        scope: params.scope,
         embedding: params.embedding,
     };
 
