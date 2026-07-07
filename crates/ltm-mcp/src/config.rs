@@ -64,8 +64,7 @@ impl Config {
         };
 
         let auth = AuthConfig {
-            api_key: env::var("LTM_AUTH_API_KEY")
-                .map_err(|_| anyhow::anyhow!("LTM_AUTH_API_KEY is required"))?,
+            api_key: env::var("LTM_AUTH_API_KEY").unwrap_or_default(),
         };
 
         let log = LogConfig {

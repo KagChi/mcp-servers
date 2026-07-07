@@ -9,12 +9,18 @@ use axum::{
 /// API key authentication middleware
 ///
 /// Validates Bearer token in Authorization header against configured API key.
-/// Returns 401 Unauthorized if missing or invalid.
+/// If API key is empty, authentication is disabled and all requests pass through.
+/// Returns 401 Unauthorized if missing or invalid when authentication is enabled.
 pub async fn auth_middleware(
     State(api_key): State<String>,
     request: Request<Body>,
     next: Next,
 ) -> Result<Response, StatusCode> {
+    // If API key is empty, authentication is disabled
+    if api_key.is_empty() {
+        return Ok(next.run(request).await);
+    }
+
     // Extract Authorization header
     let auth_header = request
         .headers()
