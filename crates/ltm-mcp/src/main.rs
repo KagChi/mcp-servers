@@ -49,32 +49,44 @@ async fn main() -> Result<()> {
     tracing::info!("Database migrations completed");
 
     let store = Arc::new(store);
+    tracing::info!("LTM server store initialized");
 
-    // Create LtmServer instance
-    let server = LtmServer::new(store, config.clone());
-    tracing::info!("LTM server instance created");
+    // HTTP/SSE transport for remote access
+    use rmcp::transport::StreamableHttpService;
+    use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
+    use rmcp::transport::streamable_http_server::StreamableHttpServerConfig;
+    use std::net::SocketAddr;
 
-    // Use rmcp stdio transport for MCP protocol
-    use rmcp::transport::io::stdio;
-    use rmcp::ServiceExt;
+    let addr = format!("{}:{}", config.server.host, config.server.port)
+        .parse::<SocketAddr>()?;
 
-    tracing::info!("Starting MCP server on stdio transport");
+    tracing::info!("Starting MCP server on HTTP/SSE transport at {}", addr);
 
-    let running = server.serve(stdio()).await?;
+    // Create session manager for stateful MCP sessions
+    let session_manager = Arc::new(LocalSessionManager::default());
 
-    tracing::info!("MCP server initialized and running");
+    // Create service factory that returns new server instances
+    let store_clone = store.clone();
+    let config_clone = config.clone();
+    let service_factory = move || {
+        let server_instance = LtmServer::new(store_clone.clone(), config_clone.clone());
+        Ok(server_instance)
+    };
 
-    // Wait for the server to finish
-    let result = running.waiting().await;
+    // Create StreamableHttpService with default config
+    let mcp_service = StreamableHttpService::new(
+        service_factory,
+        session_manager,
+        StreamableHttpServerConfig::default(),
+    );
 
-    match result {
-        Ok(_) => {
-            tracing::info!("Server shut down gracefully");
-            Ok(())
-        }
-        Err(e) => {
-            tracing::error!("Server error: {}", e);
-            Err(anyhow::anyhow!("Server error: {}", e))
-        }
-    }
+    // Mount the MCP service at /mcp endpoint
+    let router = axum::Router::new().nest_service("/mcp", mcp_service);
+
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    tracing::info!("HTTP server listening on {}", addr);
+    tracing::info!("MCP endpoint available at http://{}/mcp", addr);
+
+    axum::serve(listener, router).await?;
+    Ok(())
 }

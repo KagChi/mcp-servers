@@ -11,7 +11,7 @@ repository = "https://github.com/KagChi/mcp-servers"
 
 [workspace.dependencies]
 # MCP
-rmcp = { version = "0.16", features = ["server", "transport-io"] }
+rmcp = { version = "2.1", features = ["server", "transport-streamable-http-server"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }

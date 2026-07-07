@@ -10,10 +10,10 @@ A powerful long-term memory server for AI assistants, providing persistent stora
 
 **Features:**
 - PostgreSQL-backed persistent storage with full-text search
-- RESTful HTTP/SSE API for MCP protocol
+- HTTP/SSE transport for remote MCP access
 - API key authentication
 - Automatic database migrations
-- Docker deployment ready
+- Docker and Kubernetes deployment ready
 - Multi-platform support (linux/amd64, linux/arm64)
 
 **MCP Tools:**
@@ -77,7 +77,43 @@ All configuration is done through environment variables with the `LTM_` prefix. 
 - `LTM_LOG_LEVEL` - Log level (default: `info`)
   - Options: `trace`, `debug`, `info`, `warn`, `error`
 
+## Connecting to LTM-MCP
+
+LTM-MCP uses the Model Context Protocol (MCP) over HTTP/SSE for remote access. The MCP endpoint is available at `/mcp`.
+
+### Remote MCP Configuration
+
+To connect from an MCP client (such as Claude Desktop or other MCP-compatible tools), configure the connection with:
+
+**Endpoint URL:** `http://your-server:3000/mcp`
+
+**Authentication:** The server uses session-based authentication. Initialize a connection to receive a session ID in the `Mcp-Session-Id` header.
+
+### Example: Connecting from Claude Desktop
+
+Add to your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "ltm-mcp": {
+      "url": "http://your-ltm-server:3000/mcp",
+      "transport": "sse"
+    }
+  }
+}
+```
+
 ## API Endpoints
+
+### MCP Protocol Endpoint
+```bash
+GET/POST /mcp
+```
+The main MCP endpoint supporting HTTP/SSE transport. This endpoint handles all MCP protocol messages including:
+- Server initialization and capability negotiation
+- Tool listing and execution
+- Session management
 
 ### Health Check
 ```bash
@@ -85,16 +121,7 @@ GET /health
 ```
 Verifies server and database connectivity.
 
-### MCP Protocol Endpoints
-- `GET /mcp/v1/info` - Server information
-- `GET /mcp/v1/tools` - List available tools
-- `POST /mcp/v1/tools/call` - Call a tool
-
-All MCP endpoints require authentication via Bearer token:
-```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-  http://localhost:3000/mcp/v1/tools
-```
+**Note:** The server uses session-based MCP protocol. Connect via an MCP client (such as Claude Desktop) rather than calling endpoints directly.
 
 ## Development
 

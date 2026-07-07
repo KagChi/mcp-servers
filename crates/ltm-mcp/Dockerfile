@@ -28,6 +28,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -48,9 +49,9 @@ RUN chown -R ltm:ltm /app
 # Switch to non-root user
 USER ltm
 
-# Health check
+# Health check - verify HTTP server is responding
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["/usr/local/bin/ltm-mcp", "--health-check"] || exit 1
+    CMD curl -f http://localhost:3000/mcp || exit 1
 
 # Expose port
 EXPOSE 3000

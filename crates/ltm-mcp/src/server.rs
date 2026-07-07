@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use rmcp::{
     model::{
-        CallToolRequestParams, CallToolResult, Content, Implementation, InitializeRequestParams,
-        InitializeResult, ListToolsResult, PaginatedRequestParams, ProtocolVersion,
-        ServerCapabilities, ServerInfo, Tool, ToolsCapability,
+        CallToolRequestParams, CallToolResult, ContentBlock, Implementation, InitializeRequestParams,
+        InitializeResult, ListToolsResult, PaginatedRequestParams, ServerCapabilities,
+        ServerInfo, TextContent, Tool,
     },
     service::{RequestContext, RoleServer},
     ErrorData, ServerHandler,
@@ -30,24 +30,16 @@ impl LtmServer {
 
 impl ServerHandler for LtmServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            protocol_version: ProtocolVersion::LATEST,
-            capabilities: ServerCapabilities {
-                tools: Some(ToolsCapability {
-                    list_changed: None,
-                }),
-                ..Default::default()
-            },
-            server_info: Implementation {
-                name: "ltm-mcp".to_string(),
-                title: None,
-                version: env!("CARGO_PKG_VERSION").to_string(),
-                description: Some("Long-Term Memory MCP server with PostgreSQL storage".to_string()),
-                icons: None,
-                website_url: None,
-            },
-            instructions: Some("Use the provided tools to store, retrieve, search, and manage memory entries in PostgreSQL.".to_string()),
-        }
+        let capabilities = ServerCapabilities::builder()
+            .enable_tools()
+            .build();
+        
+        let implementation = Implementation::new("ltm-mcp", env!("CARGO_PKG_VERSION"))
+            .with_description("Long-Term Memory MCP server with PostgreSQL storage");
+        
+        InitializeResult::new(capabilities)
+            .with_server_info(implementation)
+            .with_instructions("Use the provided tools to store, retrieve, search, and manage memory entries in PostgreSQL.")
     }
 
     async fn initialize(
@@ -308,17 +300,8 @@ impl ServerHandler for LtmServer {
             }
         };
 
-        Ok(CallToolResult {
-            content: vec![Content {
-                raw: rmcp::model::RawContent::Text(rmcp::model::RawTextContent {
-                    text: result_json,
-                    meta: None,
-                }),
-                annotations: None,
-            }],
-            structured_content: None,
-            is_error: None,
-            meta: None,
-        })
+        Ok(CallToolResult::success(vec![
+            ContentBlock::Text(TextContent::new(result_json))
+        ]))
     }
 }
