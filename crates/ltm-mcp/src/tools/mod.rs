@@ -18,6 +18,10 @@ pub struct StoreMemoryParams {
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embedding: Option<Vec<f32>>,
 }
 
 pub async fn store_memory(store: Arc<PostgresStore>, params: StoreMemoryParams) -> Result<Memory> {
@@ -27,6 +31,8 @@ pub async fn store_memory(store: Arc<PostgresStore>, params: StoreMemoryParams) 
         tags: params.tags,
         collection: params.collection,
         metadata: Default::default(),
+        repo: params.repo,
+        embedding: params.embedding,
     };
 
     store
@@ -58,6 +64,16 @@ pub struct SearchMemoriesParams {
     pub limit: i64,
     #[serde(default)]
     pub offset: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_embedding: Option<Vec<f32>>,
+    #[serde(default)]
+    pub search_mode: crate::memory::SearchMode,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collection: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
 }
 
 fn default_limit() -> i64 {
@@ -72,6 +88,11 @@ pub async fn search_memories(
         query: params.query,
         limit: params.limit,
         offset: params.offset,
+        query_embedding: params.query_embedding,
+        search_mode: params.search_mode,
+        repo: params.repo,
+        collection: params.collection,
+        tags: params.tags,
     };
 
     store
@@ -91,6 +112,8 @@ pub struct ListMemoriesParams {
     pub limit: i64,
     #[serde(default)]
     pub offset: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
 }
 
 pub async fn list_memories(
@@ -102,6 +125,7 @@ pub async fn list_memories(
         tags: params.tags,
         limit: params.limit,
         offset: params.offset,
+        repo: params.repo,
     };
 
     store
@@ -122,6 +146,10 @@ pub struct UpdateMemoryParams {
     pub tags: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embedding: Option<Vec<f32>>,
 }
 
 pub async fn update_memory(
@@ -136,6 +164,8 @@ pub async fn update_memory(
         tags: params.tags,
         collection: params.collection,
         metadata: None,
+        repo: params.repo,
+        embedding: params.embedding,
     };
 
     store
