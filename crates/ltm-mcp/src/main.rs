@@ -1,6 +1,7 @@
 use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 mod auth;
@@ -84,10 +85,21 @@ async fn main() -> Result<()> {
     // Health check endpoint handler
     let health_check = || async { "OK" };
 
-    // Create protected MCP router with authentication
-    let protected_router = axum::Router::new().nest_service("/mcp", mcp_service).layer(
-        axum::middleware::from_fn_with_state(config.auth.api_key.clone(), auth_middleware),
-    );
+    // Configure CORS for SSE connections
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any)
+        .expose_headers(Any);
+
+    // Create protected MCP router with authentication and CORS
+    let protected_router = axum::Router::new()
+        .nest_service("/mcp", mcp_service)
+        .layer(axum::middleware::from_fn_with_state(
+            config.auth.api_key.clone(),
+            auth_middleware,
+        ))
+        .layer(cors);
 
     // Combine with unauthenticated health endpoint
     let router = axum::Router::new()
