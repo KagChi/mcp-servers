@@ -171,45 +171,30 @@ impl MemoryStore for PostgresStore {
         let limit = query.limit;
         let offset = query.offset;
 
-        let mut sql = String::from(
+        let mut query_builder = sqlx::QueryBuilder::new(
             "SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding FROM memories WHERE 1=1"
         );
 
-        let mut bind_idx = 1;
-        if query.repo.is_some() {
-            sql.push_str(&format!(" AND repo = ${}", bind_idx));
-            bind_idx += 1;
-        }
-        if query.collection.is_some() {
-            sql.push_str(&format!(" AND collection = ${}", bind_idx));
-            bind_idx += 1;
-        }
-        if query.tags.is_some() {
-            sql.push_str(&format!(" AND tags @> ${}", bind_idx));
-            bind_idx += 1;
-        }
-
-        sql.push_str(&format!(
-            " ORDER BY created_at DESC LIMIT ${} OFFSET ${}",
-            bind_idx,
-            bind_idx + 1
-        ));
-
-        let mut query_builder = sqlx::query(&sql);
-
         if let Some(ref repo) = query.repo {
-            query_builder = query_builder.bind(repo);
+            query_builder.push(" AND repo = ");
+            query_builder.push_bind(repo);
         }
         if let Some(ref collection) = query.collection {
-            query_builder = query_builder.bind(collection);
+            query_builder.push(" AND collection = ");
+            query_builder.push_bind(collection);
         }
         if let Some(ref tags) = query.tags {
-            query_builder = query_builder.bind(tags);
+            query_builder.push(" AND tags @> ");
+            query_builder.push_bind(tags);
         }
 
-        query_builder = query_builder.bind(limit).bind(offset);
+        query_builder.push(" ORDER BY created_at DESC LIMIT ");
+        query_builder.push_bind(limit);
+        query_builder.push(" OFFSET ");
+        query_builder.push_bind(offset);
 
         let rows = query_builder
+            .build()
             .fetch_all(&self.pool)
             .await
             .map_err(|e| CommonError::Database(e.to_string()))?;
@@ -258,70 +243,46 @@ impl MemoryStore for PostgresStore {
     }
 
     async fn update(&self, id: Uuid, update: UpdateMemory) -> Result<Memory> {
-        let mut sql = String::from("UPDATE memories SET updated_at = NOW()");
-        let mut bind_idx = 1;
-
-        if update.content.is_some() {
-            sql.push_str(&format!(", content = ${}", bind_idx));
-            bind_idx += 1;
-        }
-        if update.context.is_some() {
-            sql.push_str(&format!(", context = ${}", bind_idx));
-            bind_idx += 1;
-        }
-        if update.tags.is_some() {
-            sql.push_str(&format!(", tags = ${}", bind_idx));
-            bind_idx += 1;
-        }
-        if update.collection.is_some() {
-            sql.push_str(&format!(", collection = ${}", bind_idx));
-            bind_idx += 1;
-        }
-        if update.metadata.is_some() {
-            sql.push_str(&format!(", metadata = ${}", bind_idx));
-            bind_idx += 1;
-        }
-        if update.repo.is_some() {
-            sql.push_str(&format!(", repo = ${}", bind_idx));
-            bind_idx += 1;
-        }
-        if update.embedding.is_some() {
-            sql.push_str(&format!(", embedding = ${}", bind_idx));
-            bind_idx += 1;
-        }
-
-        sql.push_str(&format!(" WHERE id = ${} RETURNING id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding", bind_idx));
-
-        let mut query_builder = sqlx::query(&sql);
+        let mut query_builder = sqlx::QueryBuilder::new("UPDATE memories SET updated_at = NOW()");
 
         if let Some(ref content) = update.content {
-            query_builder = query_builder.bind(content);
+            query_builder.push(", content = ");
+            query_builder.push_bind(content);
         }
         if let Some(ref context) = update.context {
-            query_builder = query_builder.bind(context);
+            query_builder.push(", context = ");
+            query_builder.push_bind(context);
         }
         if let Some(ref tags) = update.tags {
-            query_builder = query_builder.bind(tags);
+            query_builder.push(", tags = ");
+            query_builder.push_bind(tags);
         }
         if let Some(ref collection) = update.collection {
-            query_builder = query_builder.bind(collection);
+            query_builder.push(", collection = ");
+            query_builder.push_bind(collection);
         }
         if let Some(ref metadata) = update.metadata {
             let metadata_json = serde_json::to_value(metadata)
                 .map_err(|e| CommonError::Serialization(e.to_string()))?;
-            query_builder = query_builder.bind(metadata_json);
+            query_builder.push(", metadata = ");
+            query_builder.push_bind(metadata_json);
         }
         if let Some(ref repo) = update.repo {
-            query_builder = query_builder.bind(repo);
+            query_builder.push(", repo = ");
+            query_builder.push_bind(repo);
         }
         if let Some(ref embedding) = update.embedding {
             let embedding_vector = pgvector::Vector::from(embedding.clone());
-            query_builder = query_builder.bind(embedding_vector);
+            query_builder.push(", embedding = ");
+            query_builder.push_bind(embedding_vector);
         }
 
-        query_builder = query_builder.bind(id);
+        query_builder.push(" WHERE id = ");
+        query_builder.push_bind(id);
+        query_builder.push(" RETURNING id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding");
 
         let row = query_builder
+            .build()
             .fetch_one(&self.pool)
             .await
             .map_err(|_e| CommonError::NotFound(format!("Memory not found: {}", id)))?;
@@ -533,54 +494,39 @@ impl MemoryStore for PostgresStore {
 // Helper methods for PostgresStore
 impl PostgresStore {
     async fn keyword_search(&self, query: &SearchQuery) -> Result<Vec<Memory>> {
-        let mut sql = String::from(
+        let mut query_builder = sqlx::QueryBuilder::new(
             r#"
             SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding,
-                   ts_rank(content_tsv, plainto_tsquery('english', $1)) as rank
-            FROM memories
-            WHERE content_tsv @@ plainto_tsquery('english', $1)
-            "#,
+                   ts_rank(content_tsv, plainto_tsquery('english', "#,
         );
-
-        let mut param_count = 2;
-        if query.repo.is_some() {
-            sql.push_str(&format!(" AND repo = ${}", param_count));
-            param_count += 1;
-        }
-        if query.collection.is_some() {
-            sql.push_str(&format!(" AND collection = ${}", param_count));
-            param_count += 1;
-        }
-        if let Some(tags) = &query.tags {
-            if !tags.is_empty() {
-                sql.push_str(&format!(" AND tags @> ${}", param_count));
-                param_count += 1;
-            }
-        }
-
-        sql.push_str(" ORDER BY rank DESC, created_at DESC LIMIT $");
-        sql.push_str(&param_count.to_string());
-        param_count += 1;
-        sql.push_str(" OFFSET $");
-        sql.push_str(&param_count.to_string());
-
-        let mut query_builder = sqlx::query(&sql).bind(&query.query);
+        query_builder.push_bind(&query.query);
+        query_builder
+            .push(")) as rank FROM memories WHERE content_tsv @@ plainto_tsquery('english', ");
+        query_builder.push_bind(&query.query);
+        query_builder.push(")");
 
         if let Some(repo) = &query.repo {
-            query_builder = query_builder.bind(repo);
+            query_builder.push(" AND repo = ");
+            query_builder.push_bind(repo);
         }
         if let Some(collection) = &query.collection {
-            query_builder = query_builder.bind(collection);
+            query_builder.push(" AND collection = ");
+            query_builder.push_bind(collection);
         }
         if let Some(tags) = &query.tags {
             if !tags.is_empty() {
-                query_builder = query_builder.bind(tags);
+                query_builder.push(" AND tags @> ");
+                query_builder.push_bind(tags);
             }
         }
 
+        query_builder.push(" ORDER BY rank DESC, created_at DESC LIMIT ");
+        query_builder.push_bind(query.limit);
+        query_builder.push(" OFFSET ");
+        query_builder.push_bind(query.offset);
+
         let rows = query_builder
-            .bind(query.limit)
-            .bind(query.offset)
+            .build()
             .fetch_all(&self.pool)
             .await
             .map_err(|e| CommonError::Database(e.to_string()))?;
@@ -595,54 +541,36 @@ impl PostgresStore {
 
         let query_vector = pgvector::Vector::from(query_embedding.clone());
 
-        let mut sql = String::from(
+        let mut query_builder = sqlx::QueryBuilder::new(
             r#"
             SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding,
-                   1 - (embedding <=> $1) as similarity
-            FROM memories
-            WHERE embedding IS NOT NULL
-            "#,
+                   1 - (embedding <=> "#,
         );
-
-        let mut param_count = 2;
-        if query.repo.is_some() {
-            sql.push_str(&format!(" AND repo = ${}", param_count));
-            param_count += 1;
-        }
-        if query.collection.is_some() {
-            sql.push_str(&format!(" AND collection = ${}", param_count));
-            param_count += 1;
-        }
-        if let Some(tags) = &query.tags {
-            if !tags.is_empty() {
-                sql.push_str(&format!(" AND tags @> ${}", param_count));
-                param_count += 1;
-            }
-        }
-
-        sql.push_str(" ORDER BY similarity DESC, created_at DESC LIMIT $");
-        sql.push_str(&param_count.to_string());
-        param_count += 1;
-        sql.push_str(" OFFSET $");
-        sql.push_str(&param_count.to_string());
-
-        let mut query_builder = sqlx::query(&sql).bind(query_vector);
+        query_builder.push_bind(query_vector);
+        query_builder.push(") as similarity FROM memories WHERE embedding IS NOT NULL");
 
         if let Some(repo) = &query.repo {
-            query_builder = query_builder.bind(repo);
+            query_builder.push(" AND repo = ");
+            query_builder.push_bind(repo);
         }
         if let Some(collection) = &query.collection {
-            query_builder = query_builder.bind(collection);
+            query_builder.push(" AND collection = ");
+            query_builder.push_bind(collection);
         }
         if let Some(tags) = &query.tags {
             if !tags.is_empty() {
-                query_builder = query_builder.bind(tags);
+                query_builder.push(" AND tags @> ");
+                query_builder.push_bind(tags);
             }
         }
 
+        query_builder.push(" ORDER BY similarity DESC, created_at DESC LIMIT ");
+        query_builder.push_bind(query.limit);
+        query_builder.push(" OFFSET ");
+        query_builder.push_bind(query.offset);
+
         let rows = query_builder
-            .bind(query.limit)
-            .bind(query.offset)
+            .build()
             .fetch_all(&self.pool)
             .await
             .map_err(|e| CommonError::Database(e.to_string()))?;
@@ -657,54 +585,40 @@ impl PostgresStore {
 
         let query_vector = pgvector::Vector::from(query_embedding.clone());
 
-        let mut sql = String::from(
+        let mut query_builder = sqlx::QueryBuilder::new(
             r#"
             SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding,
-                   (0.7 * (1 - (embedding <=> $1)) + 0.3 * ts_rank(content_tsv, plainto_tsquery('english', $2))) as hybrid_score
-            FROM memories
-            WHERE embedding IS NOT NULL AND content_tsv @@ plainto_tsquery('english', $2)
-            "#,
+                   (0.7 * (1 - (embedding <=> "#,
         );
-
-        let mut param_count = 3;
-        if query.repo.is_some() {
-            sql.push_str(&format!(" AND repo = ${}", param_count));
-            param_count += 1;
-        }
-        if query.collection.is_some() {
-            sql.push_str(&format!(" AND collection = ${}", param_count));
-            param_count += 1;
-        }
-        if let Some(tags) = &query.tags {
-            if !tags.is_empty() {
-                sql.push_str(&format!(" AND tags @> ${}", param_count));
-                param_count += 1;
-            }
-        }
-
-        sql.push_str(" ORDER BY hybrid_score DESC, created_at DESC LIMIT $");
-        sql.push_str(&param_count.to_string());
-        param_count += 1;
-        sql.push_str(" OFFSET $");
-        sql.push_str(&param_count.to_string());
-
-        let mut query_builder = sqlx::query(&sql).bind(query_vector).bind(&query.query);
+        query_builder.push_bind(query_vector);
+        query_builder.push(")) + 0.3 * ts_rank(content_tsv, plainto_tsquery('english', ");
+        query_builder.push_bind(&query.query);
+        query_builder.push("))) as hybrid_score FROM memories WHERE embedding IS NOT NULL AND content_tsv @@ plainto_tsquery('english', ");
+        query_builder.push_bind(&query.query);
+        query_builder.push(")");
 
         if let Some(repo) = &query.repo {
-            query_builder = query_builder.bind(repo);
+            query_builder.push(" AND repo = ");
+            query_builder.push_bind(repo);
         }
         if let Some(collection) = &query.collection {
-            query_builder = query_builder.bind(collection);
+            query_builder.push(" AND collection = ");
+            query_builder.push_bind(collection);
         }
         if let Some(tags) = &query.tags {
             if !tags.is_empty() {
-                query_builder = query_builder.bind(tags);
+                query_builder.push(" AND tags @> ");
+                query_builder.push_bind(tags);
             }
         }
 
+        query_builder.push(" ORDER BY hybrid_score DESC, created_at DESC LIMIT ");
+        query_builder.push_bind(query.limit);
+        query_builder.push(" OFFSET ");
+        query_builder.push_bind(query.offset);
+
         let rows = query_builder
-            .bind(query.limit)
-            .bind(query.offset)
+            .build()
             .fetch_all(&self.pool)
             .await
             .map_err(|e| CommonError::Database(e.to_string()))?;
