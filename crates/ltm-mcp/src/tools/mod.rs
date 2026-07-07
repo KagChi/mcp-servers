@@ -8,6 +8,9 @@ use crate::memory::{
     CreateMemory, ListQuery, Memory, MemoryStore, PostgresStore, SearchQuery, UpdateMemory,
 };
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct EmptyParams {}
+
 // Store memory tool
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct StoreMemoryParams {

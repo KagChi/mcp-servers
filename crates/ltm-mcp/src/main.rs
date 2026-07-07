@@ -82,8 +82,7 @@ async fn main() -> Result<()> {
         StreamableHttpServerConfig::default()
             .disable_allowed_hosts()
             .with_sse_keep_alive(Some(std::time::Duration::from_secs(30)))
-            .with_sse_retry(Some(std::time::Duration::from_secs(5)))
-            .with_stateful_mode(false),
+            .with_sse_retry(Some(std::time::Duration::from_secs(5))),
     );
 
     // Health check endpoint handler

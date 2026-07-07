@@ -146,7 +146,7 @@ impl ServerHandler for LtmServer {
                 "list_tags",
                 "List all unique tags",
                 Arc::new(
-                    serde_json::to_value(&schemars::schema_for!(()).schema)
+                    serde_json::to_value(&schemars::schema_for!(EmptyParams).schema)
                         .unwrap()
                         .as_object()
                         .unwrap()
@@ -157,7 +157,7 @@ impl ServerHandler for LtmServer {
                 "list_collections",
                 "List all unique collections",
                 Arc::new(
-                    serde_json::to_value(&schemars::schema_for!(()).schema)
+                    serde_json::to_value(&schemars::schema_for!(EmptyParams).schema)
                         .unwrap()
                         .as_object()
                         .unwrap()
