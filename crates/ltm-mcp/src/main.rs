@@ -75,11 +75,14 @@ async fn main() -> Result<()> {
         Ok(server_instance)
     };
 
-    // Create StreamableHttpService with host validation disabled
+    // Create StreamableHttpService with host validation disabled and SSE keep-alive
     let mcp_service = StreamableHttpService::new(
         service_factory,
         session_manager,
-        StreamableHttpServerConfig::default().disable_allowed_hosts(),
+        StreamableHttpServerConfig::default()
+            .disable_allowed_hosts()
+            .with_sse_keep_alive(Some(std::time::Duration::from_secs(30)))
+            .with_sse_retry(Some(std::time::Duration::from_secs(5))),
     );
 
     // Health check endpoint handler
