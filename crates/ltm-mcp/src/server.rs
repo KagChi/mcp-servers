@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use rmcp::{
     model::{
-        CallToolRequestParams, CallToolResult, ContentBlock, Implementation, InitializeRequestParams,
-        InitializeResult, ListToolsResult, PaginatedRequestParams, ServerCapabilities,
-        ServerInfo, TextContent, Tool,
+        CallToolRequestParams, CallToolResult, ContentBlock, Implementation,
+        InitializeRequestParams, InitializeResult, ListToolsResult, PaginatedRequestParams,
+        ServerCapabilities, ServerInfo, TextContent, Tool,
     },
     service::{RequestContext, RoleServer},
     ErrorData, ServerHandler,
@@ -30,13 +30,11 @@ impl LtmServer {
 
 impl ServerHandler for LtmServer {
     fn get_info(&self) -> ServerInfo {
-        let capabilities = ServerCapabilities::builder()
-            .enable_tools()
-            .build();
-        
+        let capabilities = ServerCapabilities::builder().enable_tools().build();
+
         let implementation = Implementation::new("ltm-mcp", env!("CARGO_PKG_VERSION"))
             .with_description("Long-Term Memory MCP server with PostgreSQL storage");
-        
+
         InitializeResult::new(capabilities)
             .with_server_info(implementation)
             .with_instructions("Use the provided tools to store, retrieve, search, and manage memory entries in PostgreSQL.")
@@ -300,8 +298,8 @@ impl ServerHandler for LtmServer {
             }
         };
 
-        Ok(CallToolResult::success(vec![
-            ContentBlock::Text(TextContent::new(result_json))
-        ]))
+        Ok(CallToolResult::success(vec![ContentBlock::Text(
+            TextContent::new(result_json),
+        )]))
     }
 }

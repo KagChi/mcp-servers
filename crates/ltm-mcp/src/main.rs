@@ -52,13 +52,12 @@ async fn main() -> Result<()> {
     tracing::info!("LTM server store initialized");
 
     // HTTP/SSE transport for remote access
-    use rmcp::transport::StreamableHttpService;
     use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
     use rmcp::transport::streamable_http_server::StreamableHttpServerConfig;
+    use rmcp::transport::StreamableHttpService;
     use std::net::SocketAddr;
 
-    let addr = format!("{}:{}", config.server.host, config.server.port)
-        .parse::<SocketAddr>()?;
+    let addr = format!("{}:{}", config.server.host, config.server.port).parse::<SocketAddr>()?;
 
     tracing::info!("Starting MCP server on HTTP/SSE transport at {}", addr);
 
