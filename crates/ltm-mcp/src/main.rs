@@ -6,12 +6,14 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 
 mod auth;
 mod config;
+mod embedding;
 mod memory;
 mod server;
 mod tools;
 
 use auth::auth_middleware;
 use config::Config;
+use embedding::EmbeddingService;
 use memory::postgres::PostgresStore;
 use server::LtmServer;
 
@@ -54,6 +56,32 @@ async fn main() -> Result<()> {
     let store = Arc::new(store);
     tracing::info!("LTM server store initialized");
 
+    // Initialize embedding service if enabled
+    let embedding_service = if config.embedding.enabled {
+        tracing::info!("Embedding service is enabled");
+        tracing::info!("Model: {}", config.embedding.model);
+        tracing::info!("Dimensions: {}", config.embedding.dimensions);
+        
+        match EmbeddingService::with_model(
+            &config.embedding.model,
+            config.embedding.dimensions,
+            config.embedding.cache_dir.clone(),
+        ) {
+            Ok(service) => {
+                tracing::info!("Embedding service initialized successfully");
+                Some(Arc::new(service))
+            }
+            Err(e) => {
+                tracing::error!("Failed to initialize embedding service: {}", e);
+                tracing::warn!("Continuing without embedding service - embeddings must be provided by clients");
+                None
+            }
+        }
+    } else {
+        tracing::info!("Embedding service is disabled");
+        None
+    };
+
     // HTTP/SSE transport for remote access
     use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
     use rmcp::transport::streamable_http_server::StreamableHttpServerConfig;
@@ -70,8 +98,13 @@ async fn main() -> Result<()> {
     // Create service factory that returns new server instances
     let store_clone = store.clone();
     let config_clone = config.clone();
+    let embedding_clone = embedding_service.clone();
     let service_factory = move || {
-        let server_instance = LtmServer::new(store_clone.clone(), config_clone.clone());
+        let server_instance = LtmServer::new(
+            store_clone.clone(),
+            config_clone.clone(),
+            embedding_clone.clone(),
+        );
         Ok(server_instance)
     };
 

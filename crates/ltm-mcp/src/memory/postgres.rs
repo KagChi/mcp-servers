@@ -585,18 +585,16 @@ impl PostgresStore {
 
         let query_vector = pgvector::Vector::from(query_embedding.clone());
 
+        // Reciprocal Rank Fusion (RRF) with k=60
+        // Combines semantic and keyword search results using rank-based scoring
         let mut query_builder = sqlx::QueryBuilder::new(
             r#"
-            SELECT id, content, context, tags, collection, created_at, updated_at, access_count, metadata, repo, embedding,
-                   (0.7 * (1 - (embedding <=> "#,
+            WITH semantic_search AS (
+                SELECT id, RANK() OVER (ORDER BY embedding <=> "#,
         );
-        query_builder.push_bind(query_vector);
-        query_builder.push(")) + 0.3 * ts_rank(content_tsv, plainto_tsquery('english', ");
-        query_builder.push_bind(&query.query);
-        query_builder.push("))) as hybrid_score FROM memories WHERE embedding IS NOT NULL AND content_tsv @@ plainto_tsquery('english', ");
-        query_builder.push_bind(&query.query);
-        query_builder.push(")");
-
+        query_builder.push_bind(query_vector.clone());
+        query_builder.push(") AS rank FROM memories WHERE embedding IS NOT NULL");
+        
         if let Some(repo) = &query.repo {
             query_builder.push(" AND repo = ");
             query_builder.push_bind(repo);
@@ -611,8 +609,50 @@ impl PostgresStore {
                 query_builder.push_bind(tags);
             }
         }
-
-        query_builder.push(" ORDER BY hybrid_score DESC, created_at DESC LIMIT ");
+        
+        query_builder.push(" ORDER BY embedding <=> ");
+        query_builder.push_bind(query_vector);
+        query_builder.push(" LIMIT 20");
+        
+        query_builder.push(
+            r#"
+            ),
+            keyword_search AS (
+                SELECT id, RANK() OVER (ORDER BY ts_rank(textsearch, query) DESC) AS rank
+                FROM memories, plainto_tsquery('english', "#,
+        );
+        query_builder.push_bind(&query.query);
+        query_builder.push(") query WHERE textsearch @@ query");
+        
+        if let Some(repo) = &query.repo {
+            query_builder.push(" AND repo = ");
+            query_builder.push_bind(repo);
+        }
+        if let Some(collection) = &query.collection {
+            query_builder.push(" AND collection = ");
+            query_builder.push_bind(collection);
+        }
+        if let Some(tags) = &query.tags {
+            if !tags.is_empty() {
+                query_builder.push(" AND tags @> ");
+                query_builder.push_bind(tags);
+            }
+        }
+        
+        query_builder.push(" ORDER BY ts_rank(textsearch, query) DESC LIMIT 20");
+        
+        query_builder.push(
+            r#"
+            )
+            SELECT m.*,
+                   COALESCE(1.0 / (60 + s.rank), 0.0) + COALESCE(1.0 / (60 + k.rank), 0.0) AS rrf_score
+            FROM memories m
+            LEFT JOIN semantic_search s ON m.id = s.id
+            LEFT JOIN keyword_search k ON m.id = k.id
+            WHERE s.id IS NOT NULL OR k.id IS NOT NULL
+            ORDER BY rrf_score DESC
+            LIMIT "#,
+        );
         query_builder.push_bind(query.limit);
         query_builder.push(" OFFSET ");
         query_builder.push_bind(query.offset);

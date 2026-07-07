@@ -11,6 +11,7 @@ use rmcp::{
 };
 
 use crate::config::Config;
+use crate::embedding::EmbeddingService;
 use crate::memory::postgres::PostgresStore;
 use crate::tools::*;
 
@@ -20,11 +21,13 @@ pub struct LtmServer {
     store: Arc<PostgresStore>,
     #[allow(dead_code)]
     config: Config,
+    #[allow(dead_code)]
+    embedding_service: Option<Arc<EmbeddingService>>,
 }
 
 impl LtmServer {
-    pub fn new(store: Arc<PostgresStore>, config: Config) -> Self {
-        Self { store, config }
+    pub fn new(store: Arc<PostgresStore>, config: Config, embedding_service: Option<Arc<EmbeddingService>>) -> Self {
+        Self { store, config, embedding_service }
     }
 }
 
@@ -183,7 +186,7 @@ impl ServerHandler for LtmServer {
                     serde_json::from_value(serde_json::to_value(&request.arguments).unwrap())
                         .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
 
-                let result = store_memory(store, params)
+                let result = store_memory(store, self.embedding_service.clone(), params)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
 
@@ -207,7 +210,7 @@ impl ServerHandler for LtmServer {
                     serde_json::from_value(serde_json::to_value(&request.arguments).unwrap())
                         .map_err(|e| ErrorData::invalid_params(e.to_string(), None))?;
 
-                let result = search_memories(store, params)
+                let result = search_memories(store, self.embedding_service.clone(), params)
                     .await
                     .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
 

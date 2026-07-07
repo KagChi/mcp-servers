@@ -79,7 +79,7 @@ pub struct SearchQuery {
     pub offset: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchMode {
     #[default]

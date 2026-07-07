@@ -2,8 +2,10 @@ use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use tracing::{info, warn};
 use uuid::Uuid;
 
+use crate::embedding::EmbeddingService;
 use crate::memory::{
     CreateMemory, ListQuery, Memory, MemoryStore, PostgresStore, SearchQuery, UpdateMemory,
 };
@@ -27,7 +29,33 @@ pub struct StoreMemoryParams {
     pub embedding: Option<Vec<f32>>,
 }
 
-pub async fn store_memory(store: Arc<PostgresStore>, params: StoreMemoryParams) -> Result<Memory> {
+pub async fn store_memory(
+    store: Arc<PostgresStore>,
+    embedding_service: Option<Arc<EmbeddingService>>,
+    params: StoreMemoryParams,
+) -> Result<Memory> {
+    // Auto-generate embedding if not provided and service is available
+    let embedding = match params.embedding {
+        Some(emb) => Some(emb),
+        None => {
+            if let Some(service) = embedding_service {
+                info!("Auto-generating embedding for memory content");
+                match service.embed(&params.content) {
+                    Ok(emb) => {
+                        info!("Successfully generated embedding with {} dimensions", emb.len());
+                        Some(emb)
+                    }
+                    Err(e) => {
+                        warn!("Failed to generate embedding: {}. Storing without embedding.", e);
+                        None
+                    }
+                }
+            } else {
+                None
+            }
+        }
+    };
+
     let create = CreateMemory {
         content: params.content,
         context: params.context,
@@ -35,7 +63,7 @@ pub async fn store_memory(store: Arc<PostgresStore>, params: StoreMemoryParams) 
         collection: params.collection,
         metadata: Default::default(),
         repo: params.repo,
-        embedding: params.embedding,
+        embedding,
     };
 
     store
@@ -85,13 +113,43 @@ fn default_limit() -> i64 {
 
 pub async fn search_memories(
     store: Arc<PostgresStore>,
+    embedding_service: Option<Arc<EmbeddingService>>,
     params: SearchMemoriesParams,
 ) -> Result<Vec<Memory>> {
+    // Auto-generate query embedding if not provided and service is available
+    let query_embedding = match params.query_embedding {
+        Some(emb) => Some(emb),
+        None => {
+            if let Some(service) = embedding_service {
+                // Only generate if search mode requires embeddings
+                if params.search_mode == crate::memory::SearchMode::Semantic
+                    || params.search_mode == crate::memory::SearchMode::Hybrid
+                {
+                    info!("Auto-generating query embedding for search");
+                    match service.embed(&params.query) {
+                        Ok(emb) => {
+                            info!("Successfully generated query embedding with {} dimensions", emb.len());
+                            Some(emb)
+                        }
+                        Err(e) => {
+                            warn!("Failed to generate query embedding: {}. Falling back to keyword search.", e);
+                            None
+                        }
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+    };
+
     let query = SearchQuery {
         query: params.query,
         limit: params.limit,
         offset: params.offset,
-        query_embedding: params.query_embedding,
+        query_embedding,
         search_mode: params.search_mode,
         repo: params.repo,
         collection: params.collection,
