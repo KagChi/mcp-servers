@@ -89,7 +89,7 @@ impl ServerHandler for LtmServer {
             ),
             Tool::new(
                 "search_memories",
-                "Search memories by text query using full-text search",
+                "Search memories by text query using full-text, semantic, or hybrid search. Optionally filter by scope and/or collection (and tags) to narrow results to a specific context or group.",
                 Arc::new(
                     serde_json::to_value(&schemars::schema_for!(SearchMemoriesParams).schema)
                         .unwrap()
